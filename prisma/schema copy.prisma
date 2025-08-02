@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+}
+
+enum EventType {
+  GOAL
+  ASSIST
+  YELLOW_CARD
+  RED_CARD
+  SUBSTITUTION
+  PENALTY
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  email    String @unique
+  login    String @unique
+  name     String
+  password String
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title  String
+  logo   String[] @default([])
+  images String[] @default([])
+  city   String
+
+  players        Player[]
+  home_matches   Match[]          @relation("HomeTeam")
+  guest_matches  Match[]          @relation("GuestTeam")
+  MatchEvent     MatchEvent[]
+  LeagueStanding LeagueStanding[]
+}
+
+model Player {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team_id Int
+  team    Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  name       String
+  position   String
+  number     Int
+  birth_date DateTime
+  images     String[] @default([])
+
+  stats            PlayerStat[]
+  MatchEvent       MatchEvent[]
+  AssistMatchEvent MatchEvent[] @relation("AssistPlayer")
+}
+
+model League {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title  String
+  season String
+  city   String
+  images   String[] @default([])
+
+  matches   Match[]
+  standings LeagueStanding[]
+}
+
+model Match {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  league_id Int
+  league    League @relation(fields: [league_id], references: [id], onDelete: Cascade)
+
+  home_team_id Int
+  home_team    Team @relation("HomeTeam", fields: [home_team_id], references: [id], onDelete: Cascade)
+
+  guest_team_id Int
+  guest_team    Team @relation("GuestTeam", fields: [guest_team_id], references: [id], onDelete: Cascade)
+
+  stadium     String
+  match_date  DateTime
+  status      MatchStatus @default(SCHEDULED)
+  home_score  Int         @default(0)
+  guest_score Int         @default(0)
+  round       Int
+
+  events       MatchEvent[]
+  player_stats PlayerStat[]
+  Photos       Photo[]
+  Videos       Video[]
+}
+
+model MatchEvent {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  match_id Int
+  match    Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  minute Int
+  half   Int
+  type   EventType
+
+  player_id Int
+  player    Player @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  assist_player_id Int?
+  assist_player    Player? @relation("AssistPlayer", fields: [assist_player_id], references: [id])
+
+  team_id Int
+  team    Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  description String?
+
+  @@index([match_id])
+  @@index([player_id])
+  @@index([team_id])
+}
+
+model PlayerStat {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  player_id Int
+  player    Player @relation(fields: [player_id], references: [id], onDelete: Cascade)
+
+  match_id Int
+  match    Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  goals        Int @default(0)
+  assists      Int @default(0)
+  yellow_cards Int @default(0)
+  red_cards    Int @default(0)
+
+  @@unique([player_id, match_id])
+  @@index([match_id])
+  @@index([player_id])
+}
+
+model LeagueStanding {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  league_id Int
+  league    League @relation(fields: [league_id], references: [id], onDelete: Cascade)
+
+  team_id Int
+  team    Team @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  played        Int @default(0)
+  wins          Int @default(0)
+  draws         Int @default(0)
+  losses        Int @default(0)
+  goals_for     Int @default(0)
+  goals_against Int @default(0)
+  points        Int @default(0)
+
+  @@index([league_id])
+  @@index([team_id])
+}
+
+model Partner {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  name   String
+  images String[] @default([])
+  link   String?
+}
+
+model Photo {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  match_id Int
+  match    Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  images String[] @default([])
+}
+
+model Video {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  match_id Int
+  match    Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  videos String[] @default([])
+}

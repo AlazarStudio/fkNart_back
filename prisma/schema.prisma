@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,6 +5,20 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+}
+
+enum EventType {
+  GOAL
+  ASSIST
+  YELLOW_CARD
+  RED_CARD
+  SUBSTITUTION
 }
 
 model User {
@@ -22,4 +30,154 @@ model User {
   login    String @unique
   name     String
   password String
+}
+
+model League {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title  String
+  season String
+  city   String
+  images String[] @default([])
+
+  matches   Match[]
+  standings LeagueStanding[]
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title       String
+  logo        String[] @default([])
+  images      String[] @default([])
+  city        String
+  games       Int      @default(0)
+  wins        Int      @default(0)
+  goals       Int      @default(0)
+  tournaments Int      @default(0)
+
+  MatchEvent MatchEvent[]
+  players    Player[]
+
+  homeMatches  Match[]          @relation("HomeMatches")
+  guestMatches Match[]          @relation("GuestMatches")
+  standings    LeagueStanding[]
+}
+
+model Player {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  name      String
+  position  String
+  number    Int
+  birthDate DateTime
+  images    String[] @default([])
+
+  stats   PlayerStat[]
+  events  MatchEvent[] @relation("MainPlayer")
+  assists MatchEvent[] @relation("AssistPlayer")
+
+  teamId Int
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model Match {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stadium    String
+  date       DateTime
+  status     MatchStatus @default(SCHEDULED)
+  homeScore  Int
+  guestScore Int
+  round      Int
+  images     String[]    @default([])
+  videos     String[]    @default([])
+
+  leagueId Int
+  league   League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+
+  homeTeamId  Int
+  homeTeam    Team @relation("HomeMatches", fields: [homeTeamId], references: [id])
+  guestTeamId Int
+  guestTeam   Team @relation("GuestMatches", fields: [guestTeamId], references: [id])
+
+  events MatchEvent[]
+}
+
+model MatchEvent {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  minute Int
+  half   Int
+  type   EventType
+
+  description String?
+
+  playerId Int
+  player   Player @relation("MainPlayer", fields: [playerId], references: [id], onDelete: Cascade)
+
+  assistPlayerId Int?
+  assist_player  Player? @relation("AssistPlayer", fields: [assistPlayerId], references: [id])
+
+  teamId Int
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  matchId Int
+  match   Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model PlayerStat {
+  id            Int @id @default(autoincrement())
+  goals         Int @default(0)
+  assists       Int @default(0)
+  yellow_cards  Int @default(0)
+  red_cards     Int @default(0)
+  matchesPlayed Int @default(0)
+
+  playerId Int    @unique
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+}
+
+model PlayerMatch {
+  id       Int @id @default(autoincrement())
+  playerId Int
+  matchId  Int
+
+  @@unique([playerId, matchId])
+}
+
+model LeagueStanding {
+  id            Int @id @default(autoincrement())
+  league_id     Int
+  team_id       Int
+  played        Int @default(0)
+  wins          Int @default(0)
+  draws         Int @default(0)
+  losses        Int @default(0)
+  goals_for     Int @default(0)
+  goals_against Int @default(0)
+  points        Int @default(0)
+
+  league League @relation(fields: [league_id], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [team_id], references: [id], onDelete: Cascade)
+}
+
+model Partner {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  name   String
+  images String[] @default([])
+  link   String?
 }
