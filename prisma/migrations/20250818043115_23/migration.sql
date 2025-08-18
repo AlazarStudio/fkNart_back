@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "public"."Match" ADD COLUMN     "guestLineup" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+ADD COLUMN     "guestSubs" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+ADD COLUMN     "homeLineup" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+ADD COLUMN     "homeSubs" INTEGER[] DEFAULT ARRAY[]::INTEGER[],
+ADD COLUMN     "referees" TEXT[] DEFAULT ARRAY[]::TEXT[];

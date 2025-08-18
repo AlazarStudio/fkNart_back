@@ -4,13 +4,16 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
+// утилита: гол = обычный гол или забитый пенальти
+const isGoalType = (type) => type === 'GOAL' || type === 'PENALTY_SCORED';
+
 // ✅ инкремент статистики игрока (общая по игроку)
 async function incrementStat(playerId, type) {
   await prisma.playerStat.upsert({
     where: { playerId },
     update: {
       matchesPlayed: { increment: 0 },
-      goals: type === 'GOAL' ? { increment: 1 } : undefined,
+      goals: isGoalType(type) ? { increment: 1 } : undefined,
       assists: type === 'ASSIST' ? { increment: 1 } : undefined,
       yellow_cards: type === 'YELLOW_CARD' ? { increment: 1 } : undefined,
       red_cards: type === 'RED_CARD' ? { increment: 1 } : undefined,
@@ -18,7 +21,7 @@ async function incrementStat(playerId, type) {
     create: {
       playerId,
       matchesPlayed: 1,
-      goals: type === 'GOAL' ? 1 : 0,
+      goals: isGoalType(type) ? 1 : 0,
       assists: type === 'ASSIST' ? 1 : 0,
       yellow_cards: type === 'YELLOW_CARD' ? 1 : 0,
       red_cards: type === 'RED_CARD' ? 1 : 0,
@@ -31,7 +34,7 @@ async function decrementStat(playerId, type) {
   await prisma.playerStat.updateMany({
     where: { playerId },
     data: {
-      goals: type === 'GOAL' ? { decrement: 1 } : undefined,
+      goals: isGoalType(type) ? { decrement: 1 } : undefined,
       assists: type === 'ASSIST' ? { decrement: 1 } : undefined,
       yellow_cards: type === 'YELLOW_CARD' ? { decrement: 1 } : undefined,
       red_cards: type === 'RED_CARD' ? { decrement: 1 } : undefined,
@@ -39,10 +42,10 @@ async function decrementStat(playerId, type) {
   });
 }
 
-// ✅ пересчёт счёта матча
+// ✅ пересчёт счёта матча (гол + реализованный пенальти)
 async function updateMatchScore(matchId) {
   const goals = await prisma.matchEvent.findMany({
-    where: { matchId, type: 'GOAL' },
+    where: { matchId, type: { in: ['GOAL', 'PENALTY_SCORED'] } },
     include: { team: true },
   });
 
@@ -160,9 +163,15 @@ router.post('/', async (req, res) => {
     });
 
     if (playerId) await incrementStat(Number(playerId), type);
-    if (assistPlayerId && type === 'GOAL')
+
+    // ассист считаем только для обычного гола
+    if (assistPlayerId && type === 'GOAL') {
       await incrementStat(Number(assistPlayerId), 'ASSIST');
-    if (type === 'GOAL') await updateMatchScore(Number(matchId));
+    }
+
+    if (isGoalType(type)) {
+      await updateMatchScore(Number(matchId));
+    }
 
     res.status(201).json(created);
   } catch (err) {
@@ -190,10 +199,12 @@ router.put('/:id', async (req, res) => {
     const oldEvent = await prisma.matchEvent.findUnique({ where: { id } });
     if (!oldEvent) return res.status(404).json({ error: 'Событие не найдено' });
 
+    // снять старые инкременты
     if (oldEvent.playerId)
       await decrementStat(oldEvent.playerId, oldEvent.type);
-    if (oldEvent.assistPlayerId && oldEvent.type === 'GOAL')
+    if (oldEvent.assistPlayerId && oldEvent.type === 'GOAL') {
       await decrementStat(oldEvent.assistPlayerId, 'ASSIST');
+    }
 
     const updated = await prisma.matchEvent.update({
       where: { id },
@@ -209,10 +220,16 @@ router.put('/:id', async (req, res) => {
       include: { player: true, team: true, match: true },
     });
 
+    // применить новые инкременты
     if (playerId) await incrementStat(Number(playerId), type);
-    if (assistPlayerId && type === 'GOAL')
+    if (assistPlayerId && type === 'GOAL') {
       await incrementStat(Number(assistPlayerId), 'ASSIST');
-    await updateMatchScore(updated.matchId);
+    }
+
+    // пересчитать счёт, если тип/старый тип — гол
+    if (isGoalType(type) || isGoalType(oldEvent.type)) {
+      await updateMatchScore(updated.matchId);
+    }
 
     res.json(updated);
   } catch (err) {
@@ -235,9 +252,10 @@ router.delete('/:id', async (req, res) => {
 
     if (oldEvent.playerId)
       await decrementStat(oldEvent.playerId, oldEvent.type);
-    if (oldEvent.assistPlayerId && oldEvent.type === 'GOAL')
+    if (oldEvent.assistPlayerId && oldEvent.type === 'GOAL') {
       await decrementStat(oldEvent.assistPlayerId, 'ASSIST');
-    if (oldEvent.type === 'GOAL') await updateMatchScore(oldEvent.matchId);
+    }
+    if (isGoalType(oldEvent.type)) await updateMatchScore(oldEvent.matchId);
 
     res.json({ success: true });
   } catch (err) {

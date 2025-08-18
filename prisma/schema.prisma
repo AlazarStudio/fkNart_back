@@ -19,6 +19,8 @@ enum EventType {
   YELLOW_CARD
   RED_CARD
   SUBSTITUTION
+  PENALTY_SCORED // пенальти забит
+  PENALTY_MISSED // пенальти не реализован
 }
 
 model User {
@@ -180,4 +182,15 @@ model Partner {
   name   String
   images String[] @default([])
   link   String?
+}
+
+model News {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  title       String
+  description String
+  images      String[] @default([])
+  date        DateTime
 }

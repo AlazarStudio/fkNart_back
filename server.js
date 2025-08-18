@@ -18,9 +18,11 @@ import leagueStandingController from './app/controllers/leagueStanding.js';
 import matchController from './app/controllers/match.js';
 import matchEventController from './app/controllers/matchEvent.js';
 import partnersController from './app/controllers/partners.js';
+import newsController from './app/controllers/news.js';
 import playerController from './app/controllers/player.js';
 import playerStatController from './app/controllers/playerStat.js';
 import uploadsController from './app/controllers/uploads.js';
+import videoUploadsController from './app/controllers/videoUpload.js';
 
 dotenv.config();
 
@@ -59,7 +61,9 @@ app.use('/api/matchEvents', matchEventController);
 app.use('/api/players', playerController);
 app.use('/api/playerStats', playerStatController);
 app.use('/api/partners', partnersController);
+app.use('/api/news', newsController);
 app.use('/api/upload', uploadsController);
+app.use('/api/upload-videos', videoUploadsController);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -68,7 +72,7 @@ const PORT = 5000;
 // const PORT = 443;
 
 app.listen(PORT, () =>
-  console.log(`🚀 Server running in ${process.env.NODE_ENV} on port ${PORT}`)
+  console.log(`🚀 Server running on port ${PORT}`)
 );
 
 // httpsServer.listen(PORT, () => {

@@ -9,29 +9,51 @@ router.get('/', async (req, res) => {
   try {
     const range = req.query.range ? JSON.parse(req.query.range) : [0, 9];
     const sort = req.query.sort ? JSON.parse(req.query.sort) : ['id', 'ASC'];
-    let filter = req.query.filter ? JSON.parse(req.query.filter) : {};
+    const rawFilter = req.query.filter ? JSON.parse(req.query.filter) : {};
 
-    const start = range[0];
-    const end = range[1];
-    const take = end - start + 1;
+    const [start, end] = range;
+    const take = Math.max(0, end - start + 1);
 
-    const orderBy = {};
-    orderBy[sort[0]] = sort[1].toLowerCase();
+    const orderBy = {
+      [sort[0]]: String(sort[1]).toLowerCase() === 'desc' ? 'desc' : 'asc',
+    };
 
-    // ✅ ReferenceInput fix
-    if (filter.id && Array.isArray(filter.id)) {
-      filter = { id: { in: filter.id.map(Number) } };
+    // соберём where
+    const AND = [];
+
+    // id: [1,2,3]
+    if (Array.isArray(rawFilter.id)) {
+      const ids = rawFilter.id.map(Number).filter(Number.isFinite);
+      if (ids.length) AND.push({ id: { in: ids } });
     }
+
+    // teamId: число
+    if (rawFilter.teamId != null) {
+      const teamId = Number(rawFilter.teamId);
+      if (Number.isFinite(teamId)) AND.push({ teamId });
+    }
+
+    // q: поиск по имени
+    if (typeof rawFilter.q === 'string' && rawFilter.q.trim()) {
+      AND.push({ name: { contains: rawFilter.q.trim(), mode: 'insensitive' } });
+    }
+
+    // position
+    if (typeof rawFilter.position === 'string' && rawFilter.position.trim()) {
+      AND.push({ position: rawFilter.position.trim() });
+    }
+
+    const where = AND.length ? { AND } : undefined;
 
     const [data, total] = await Promise.all([
       prisma.player.findMany({
         skip: start,
         take,
-        where: filter,
+        where,
         orderBy,
         include: { team: true },
       }),
-      prisma.player.count({ where: filter }),
+      prisma.player.count({ where }),
     ]);
 
     res.setHeader(
@@ -46,18 +68,27 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 📌 Один игрок
-router.get('/:id', async (req, res) => {
+/* 👉 ВСЕ специфичные маршруты держи ВЫШЕ общего :id
+// Пример на будущее:
+// router.get('/:id(\\d+)/matchStats', async (req, res) => { ... });
+*/
+
+// 📌 Один игрок (только числовой id!)
+router.get('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ error: 'Некорректный id' });
+
     const player = await prisma.player.findUnique({
       where: { id },
       include: { team: true },
     });
     if (!player) return res.status(404).json({ error: 'Игрок не найден' });
+
     res.json(player);
   } catch (err) {
-    console.error(err);
+    console.error('Ошибка GET /players/:id:', err);
     res.status(500).json({ error: 'Ошибка получения игрока' });
   }
 });
@@ -69,17 +100,20 @@ router.post('/', async (req, res) => {
 
     images = Array.isArray(images)
       ? images
-          .map((i) => (typeof i === 'string' ? i : i.src || ''))
+          .map((i) => (typeof i === 'string' ? i : i?.src || ''))
           .filter(Boolean)
       : [];
+
+    const num = Number(number);
+    const tId = Number(teamId);
 
     const created = await prisma.player.create({
       data: {
         name,
         position,
-        number: Number(number),
-        birthDate: birthDate ? new Date(birthDate) : new Date(), // ✅ фикс
-        teamId: Number(teamId),
+        number: Number.isFinite(num) ? num : 0,
+        birthDate: birthDate ? new Date(birthDate) : new Date(),
+        teamId: Number.isFinite(tId) ? tId : undefined,
         images,
       },
     });
@@ -91,25 +125,32 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+// 📌 Обновить игрока
+router.put('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ error: 'Некорректный id' });
+
     let { name, position, number, birthDate, teamId, images = [] } = req.body;
 
     images = Array.isArray(images)
       ? images
-          .map((i) => (typeof i === 'string' ? i : i.src || ''))
+          .map((i) => (typeof i === 'string' ? i : i?.src || ''))
           .filter(Boolean)
       : [];
+
+    const num = Number(number);
+    const tId = Number(teamId);
 
     const updated = await prisma.player.update({
       where: { id },
       data: {
         name,
         position,
-        number: Number(number),
+        number: Number.isFinite(num) ? num : 0,
         birthDate: birthDate ? new Date(birthDate) : new Date(),
-        teamId: Number(teamId),
+        teamId: Number.isFinite(tId) ? tId : undefined,
         images,
       },
     });
@@ -122,13 +163,16 @@ router.put('/:id', async (req, res) => {
 });
 
 // 📌 Удалить игрока
-router.delete('/:id', async (req, res) => {
+router.delete('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isFinite(id))
+      return res.status(400).json({ error: 'Некорректный id' });
+
     await prisma.player.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error('Ошибка удаления игрока:', err);
     res.status(500).json({ error: 'Ошибка удаления игрока' });
   }
 });
