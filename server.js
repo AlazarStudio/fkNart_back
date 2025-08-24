@@ -69,12 +69,9 @@ app.use(notFound);
 app.use(errorHandler);
 
 // const PORT = 5000;
+// app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 const PORT = 443;
-
-// app.listen(PORT, () =>
-//   console.log(`🚀 Server running on port ${PORT}`)
-// );
-
 httpsServer.listen(PORT, () => {
   console.log('Server is now running on https 443');
 });
