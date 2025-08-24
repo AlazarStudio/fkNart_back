@@ -29,9 +29,9 @@ dotenv.config();
 const app = express();
 
 const sslOptions = {
-  key: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/cert.pem'),
-  ca: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/chain.pem'),
+  key: fs.readFileSync('/etc/letsencrypt/live/avar.demoalazar.ru/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/avar.demoalazar.ru/cert.pem'),
+  ca: fs.readFileSync('/etc/letsencrypt/live/avar.demoalazar.ru/chain.pem'),
 };
 
 const httpsServer = https.createServer(sslOptions, app);
@@ -71,7 +71,9 @@ app.use(errorHandler);
 // const PORT = 5000;
 const PORT = 443;
 
-// s
+// app.listen(PORT, () =>
+//   console.log(`🚀 Server running on port ${PORT}`)
+// );
 
 httpsServer.listen(PORT, () => {
   console.log('Server is now running on https 443');

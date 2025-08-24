@@ -1,47 +1,34 @@
-// prisma/seed.js  (CommonJS)
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+// scripts/seedAdmin.js
+import { PrismaClient } from '@prisma/client';
+import { hash } from 'argon2';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Задай пароль через переменную окружения, иначе будет дефолтный
-  const plain = process.env.SEED_ADMIN_PASS || 'kjshdf8!hdei!!00';
-  const hash = await bcrypt.hash(plain, 10);
+  console.log('🌱 Запуск сидов...');
 
-  // upsert по уникальному email
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@nart.local' },
+  const passwordHash = await hash('jnb9usdf98'); // ← хешируем
+
+  // Лучше апсерт по login, если в схеме login UNIQUE
+  await prisma.user.upsert({
+    where: { login: 'admin' }, // <= ключ поиска совпадает с authUser
     update: {
-      name: 'Админ',
-      login: 'adminNart',
-      password: hash,
+      // если пользователь уже есть — обновим пароль на хеш
+      password: passwordHash,
+      email: 'admin@test.com',
+      name: 'Admin',
     },
     create: {
-      email: 'admin@nart.local',
-      login: 'adminNart',
-      name: 'Админ',
-      password: hash,
+      email: 'admin@test.com',
+      login: 'nartAdmin',
+      name: 'Admin',
+      password: passwordHash, // <= сохраняем хеш
     },
   });
 
-  console.log('✅ user seeded:', {
-    id: admin.id,
-    email: admin.email,
-    login: admin.login,
-  });
-  console.log(
-    'ℹ️ admin password:',
-    plain,
-    '(можно задать через SEED_ADMIN_PASS)'
-  );
+  console.log('✅ Админ готов');
 }
 
-main()
-  .catch((e) => {
-    console.error('Seed error:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().finally(async () => {
+  await prisma.$disconnect();
+});
