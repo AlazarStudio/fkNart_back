@@ -23,18 +23,20 @@ import playerController from './app/controllers/player.js';
 import playerStatController from './app/controllers/playerStat.js';
 import uploadsController from './app/controllers/uploads.js';
 import videoUploadsController from './app/controllers/videoUpload.js';
+import refereeRoutes from './app/controllers/referee.js';
+import stadiumRoutes from './app/controllers/stadium.js';
 
 dotenv.config();
 
 const app = express();
 
-const sslOptions = {
-  key: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/cert.pem'),
-  ca: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/chain.pem'),
-};
+// const sslOptions = {
+//   key: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/privkey.pem'),
+//   cert: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/cert.pem'),
+//   ca: fs.readFileSync('/etc/letsencrypt/live/backend.fcnart.ru/chain.pem'),
+// };
 
-const httpsServer = https.createServer(sslOptions, app);
+// const httpsServer = https.createServer(sslOptions, app);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -64,14 +66,16 @@ app.use('/api/partners', partnersController);
 app.use('/api/news', newsController);
 app.use('/api/upload', uploadsController);
 app.use('/api/upload-videos', videoUploadsController);
+app.use('/api/referees', refereeRoutes);
+app.use('/api/stadiums', stadiumRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
 
-// const PORT = 5000;
-// app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
-const PORT = 443;
-httpsServer.listen(PORT, () => {
-  console.log('Server is now running on https 443');
-});
+// const PORT = 443;
+// httpsServer.listen(PORT, () => {
+//   console.log('Server is now running on https 443');
+// });

@@ -89,12 +89,57 @@ model Player {
   team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
 }
 
+model Stadium {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  name     String // название
+  location String? // местоположение (адрес, город и т.п.)
+
+  matches Match[] // обратная связь
+}
+
+enum RefereeRole {
+  MAIN
+  ASSISTANT1
+  ASSISTANT2
+  FOURTH
+  VAR
+  AVAR
+}
+
+model Referee {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  name String
+
+  matchRefs MatchReferee[] // <— матчи где судья работал
+}
+
+model MatchReferee {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  matchId   Int
+  refereeId Int
+  role      RefereeRole?
+
+  match   Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  referee Referee @relation(fields: [refereeId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, refereeId]) // один судья — одна запись на матч
+}
+
 model Match {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  stadium    String
+ 
   date       DateTime
   status     MatchStatus @default(SCHEDULED)
   homeScore  Int
@@ -110,6 +155,12 @@ model Match {
   homeTeam    Team @relation("HomeMatches", fields: [homeTeamId], references: [id])
   guestTeamId Int
   guestTeam   Team @relation("GuestMatches", fields: [guestTeamId], references: [id])
+
+  stadiumId  Int?
+  stadiumRel Stadium? @relation(fields: [stadiumId], references: [id], onDelete: SetNull)
+
+  // БЫЛО: refereeId / referees — удаляем
+  matchReferees MatchReferee[] // <— массив связей "матч—судья"
 
   events MatchEvent[]
 }
