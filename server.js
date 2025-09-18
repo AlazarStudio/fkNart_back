@@ -25,6 +25,7 @@ import uploadsController from './app/controllers/uploads.js';
 import videoUploadsController from './app/controllers/videoUpload.js';
 import refereeRoutes from './app/controllers/referee.js';
 import stadiumRoutes from './app/controllers/stadium.js';
+import lineupRoutes from './app/controllers/lineUp.js';
 
 dotenv.config();
 
@@ -68,6 +69,7 @@ app.use('/api/upload', uploadsController);
 app.use('/api/upload-videos', videoUploadsController);
 app.use('/api/referees', refereeRoutes);
 app.use('/api/stadiums', stadiumRoutes);
+app.use('/api', lineupRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

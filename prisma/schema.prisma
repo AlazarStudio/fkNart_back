@@ -19,8 +19,30 @@ enum EventType {
   YELLOW_CARD
   RED_CARD
   SUBSTITUTION
-  PENALTY_SCORED // пенальти забит
-  PENALTY_MISSED // пенальти не реализован
+  PENALTY_SCORED
+  PENALTY_MISSED
+}
+
+enum LineupRole {
+  STARTER
+  SUBSTITUTE
+  RESERVE
+}
+
+enum FieldPosition {
+  GK
+  RB
+  CB
+  LB
+  RWB
+  LWB
+  DM
+  CM
+  AM
+  RW
+  LW
+  SS
+  ST
 }
 
 model User {
@@ -77,7 +99,7 @@ model Player {
 
   name      String
   position  String
-  number    Int
+  number    Int? // ← стало необязательным
   birthDate DateTime
   images    String[] @default([])
 
@@ -87,6 +109,8 @@ model Player {
 
   teamId Int
   team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  playerMatches PlayerMatch[]
 }
 
 model Stadium {
@@ -94,10 +118,10 @@ model Stadium {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  name     String // название
-  location String? // местоположение (адрес, город и т.п.)
+  name     String
+  location String?
 
-  matches Match[] // обратная связь
+  matches Match[]
 }
 
 enum RefereeRole {
@@ -116,7 +140,7 @@ model Referee {
 
   name String
 
-  matchRefs MatchReferee[] // <— матчи где судья работал
+  matchRefs MatchReferee[]
 }
 
 model MatchReferee {
@@ -131,7 +155,7 @@ model MatchReferee {
   match   Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
   referee Referee @relation(fields: [refereeId], references: [id], onDelete: Cascade)
 
-  @@unique([matchId, refereeId]) // один судья — одна запись на матч
+  @@unique([matchId, refereeId])
 }
 
 model Match {
@@ -139,7 +163,6 @@ model Match {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
- 
   date       DateTime
   status     MatchStatus @default(SCHEDULED)
   homeScore  Int
@@ -159,10 +182,15 @@ model Match {
   stadiumId  Int?
   stadiumRel Stadium? @relation(fields: [stadiumId], references: [id], onDelete: SetNull)
 
-  // БЫЛО: refereeId / referees — удаляем
-  matchReferees MatchReferee[] // <— массив связей "матч—судья"
+  matchReferees MatchReferee[]
+  events        MatchEvent[]
 
-  events MatchEvent[]
+  participants PlayerMatch[]
+
+  homeFormation  String?
+  guestFormation String?
+  homeCoach      String?
+  guestCoach     String?
 }
 
 model MatchEvent {
@@ -170,10 +198,9 @@ model MatchEvent {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  minute Int
-  half   Int
-  type   EventType
-
+  minute      Int
+  half        Int
+  type        EventType
   description String?
 
   playerId Int
@@ -206,7 +233,18 @@ model PlayerMatch {
   playerId Int
   matchId  Int
 
+  role       LineupRole     @default(STARTER)
+  position   FieldPosition?
+  isCaptain  Boolean        @default(false)
+  order      Int            @default(0)
+  minutesIn  Int?
+  minutesOut Int?
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
   @@unique([playerId, matchId])
+  @@index([matchId, role, order])
 }
 
 model LeagueStanding {

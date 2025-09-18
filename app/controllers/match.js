@@ -63,7 +63,8 @@ router.get('/', async (req, res) => {
     const take = end - start + 1;
 
     const orderBy = {};
-    orderBy[sort[0]] = sort[1].toLowerCase();
+    orderBy[sort[0]] =
+      String(sort[1]).toLowerCase() === 'desc' ? 'desc' : 'asc';
 
     if (filter.id && Array.isArray(filter.id)) {
       filter = { id: { in: filter.id.map(Number) } };
@@ -79,7 +80,7 @@ router.get('/', async (req, res) => {
           league: true,
           homeTeam: true,
           guestTeam: true,
-          stadiumRel: true, // ← стадион из справочника
+          stadiumRel: true,
           matchReferees: {
             include: { referee: true },
             orderBy: [{ role: 'asc' }, { id: 'asc' }],
@@ -87,6 +88,10 @@ router.get('/', async (req, res) => {
           events: {
             include: { player: true, assist_player: true, team: true },
             orderBy: [{ half: 'asc' }, { minute: 'asc' }, { id: 'asc' }],
+          },
+          participants: {
+            include: { player: { include: { team: true } } },
+            orderBy: [{ role: 'asc' }, { order: 'asc' }, { id: 'asc' }],
           },
         },
       }),
@@ -106,7 +111,7 @@ router.get('/', async (req, res) => {
 });
 
 // ---- Один матч
-router.get('/:id', async (req, res) => {
+router.get('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
     const match = await prisma.match.findUnique({
@@ -115,7 +120,7 @@ router.get('/:id', async (req, res) => {
         league: true,
         homeTeam: true,
         guestTeam: true,
-        stadiumRel: true, // ← стадион из справочника
+        stadiumRel: true,
         matchReferees: {
           include: { referee: true },
           orderBy: [{ role: 'asc' }, { id: 'asc' }],
@@ -123,6 +128,10 @@ router.get('/:id', async (req, res) => {
         events: {
           include: { player: true, assist_player: true, team: true },
           orderBy: [{ half: 'asc' }, { minute: 'asc' }, { id: 'asc' }],
+        },
+        participants: {
+          include: { player: { include: { team: true } } },
+          orderBy: [{ role: 'asc' }, { order: 'asc' }, { id: 'asc' }],
         },
       },
     });
@@ -146,7 +155,7 @@ router.post('/', async (req, res) => {
       leagueId,
       homeTeamId,
       guestTeamId,
-      stadiumId, // ← принимаем stadiumId
+      stadiumId,
       images = [],
       videos = [],
       events = [],
@@ -164,7 +173,7 @@ router.post('/', async (req, res) => {
           leagueId: leagueId ? Number(leagueId) : null,
           homeTeamId: homeTeamId ? Number(homeTeamId) : null,
           guestTeamId: guestTeamId ? Number(guestTeamId) : null,
-          stadiumId: stadiumId != null ? Number(stadiumId) : null, // ← сохраняем
+          stadiumId: stadiumId != null ? Number(stadiumId) : null,
           images,
           videos,
         },
@@ -223,6 +232,10 @@ router.post('/', async (req, res) => {
             include: { player: true, assist_player: true, team: true },
             orderBy: [{ half: 'asc' }, { minute: 'asc' }, { id: 'asc' }],
           },
+          participants: {
+            include: { player: { include: { team: true } } },
+            orderBy: [{ role: 'asc' }, { order: 'asc' }, { id: 'asc' }],
+          },
         },
       });
     });
@@ -235,7 +248,7 @@ router.post('/', async (req, res) => {
 });
 
 // ---- Обновить матч (+ полная замена matchReferees при передаче массива)
-router.put('/:id', async (req, res) => {
+router.put('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
     const {
@@ -247,7 +260,7 @@ router.put('/:id', async (req, res) => {
       leagueId,
       homeTeamId,
       guestTeamId,
-      stadiumId, // ← принимаем stadiumId
+      stadiumId,
       images = [],
       videos = [],
       events, // если массив — полная замена
@@ -266,7 +279,7 @@ router.put('/:id', async (req, res) => {
           leagueId: leagueId ? Number(leagueId) : null,
           homeTeamId: homeTeamId ? Number(homeTeamId) : null,
           guestTeamId: guestTeamId ? Number(guestTeamId) : null,
-          stadiumId: stadiumId != null ? Number(stadiumId) : null, // ← сохраняем
+          stadiumId: stadiumId != null ? Number(stadiumId) : null,
           images,
           videos,
         },
@@ -292,6 +305,7 @@ router.put('/:id', async (req, res) => {
         const oldEvents = await tx.matchEvent.findMany({
           where: { matchId: id },
         });
+
         for (const oe of oldEvents) {
           if (oe.playerId) {
             await tx.playerStat.updateMany({
@@ -313,6 +327,7 @@ router.put('/:id', async (req, res) => {
             });
           }
         }
+
         await tx.matchEvent.deleteMany({ where: { matchId: id } });
 
         for (const e of events) {
@@ -350,6 +365,10 @@ router.put('/:id', async (req, res) => {
             include: { player: true, assist_player: true, team: true },
             orderBy: [{ half: 'asc' }, { minute: 'asc' }, { id: 'asc' }],
           },
+          participants: {
+            include: { player: { include: { team: true } } },
+            orderBy: [{ role: 'asc' }, { order: 'asc' }, { id: 'asc' }],
+          },
         },
       });
     });
@@ -362,11 +381,12 @@ router.put('/:id', async (req, res) => {
 });
 
 // ---- Удалить матч
-router.delete('/:id', async (req, res) => {
+router.delete('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
     await prisma.$transaction(async (tx) => {
       const events = await tx.matchEvent.findMany({ where: { matchId: id } });
+
       for (const ev of events) {
         if (ev.playerId) {
           await tx.playerStat.updateMany({
@@ -387,8 +407,10 @@ router.delete('/:id', async (req, res) => {
           });
         }
       }
+
       await tx.matchEvent.deleteMany({ where: { matchId: id } });
       await tx.matchReferee.deleteMany({ where: { matchId: id } });
+      await tx.playerMatch.deleteMany({ where: { matchId: id } }); // очищаем заявки
       await tx.match.delete({ where: { id } });
     });
 

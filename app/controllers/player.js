@@ -1,3 +1,4 @@
+// app/controllers/player.js
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 
@@ -18,27 +19,22 @@ router.get('/', async (req, res) => {
       [sort[0]]: String(sort[1]).toLowerCase() === 'desc' ? 'desc' : 'asc',
     };
 
-    // соберём where
     const AND = [];
 
-    // id: [1,2,3]
     if (Array.isArray(rawFilter.id)) {
       const ids = rawFilter.id.map(Number).filter(Number.isFinite);
       if (ids.length) AND.push({ id: { in: ids } });
     }
 
-    // teamId: число
     if (rawFilter.teamId != null) {
       const teamId = Number(rawFilter.teamId);
       if (Number.isFinite(teamId)) AND.push({ teamId });
     }
 
-    // q: поиск по имени
     if (typeof rawFilter.q === 'string' && rawFilter.q.trim()) {
       AND.push({ name: { contains: rawFilter.q.trim(), mode: 'insensitive' } });
     }
 
-    // position
     if (typeof rawFilter.position === 'string' && rawFilter.position.trim()) {
       AND.push({ position: rawFilter.position.trim() });
     }
@@ -68,12 +64,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-/* 👉 ВСЕ специфичные маршруты держи ВЫШЕ общего :id
-// Пример на будущее:
-// router.get('/:id(\\d+)/matchStats', async (req, res) => { ... });
-*/
-
-// 📌 Один игрок (только числовой id!)
+// 📌 Один игрок
 router.get('/:id(\\d+)', async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -111,7 +102,7 @@ router.post('/', async (req, res) => {
       data: {
         name,
         position,
-        number: Number.isFinite(num) ? num : 0,
+        number: Number.isFinite(num) ? num : null, // ← nullable
         birthDate: birthDate ? new Date(birthDate) : new Date(),
         teamId: Number.isFinite(tId) ? tId : undefined,
         images,
@@ -148,7 +139,7 @@ router.put('/:id(\\d+)', async (req, res) => {
       data: {
         name,
         position,
-        number: Number.isFinite(num) ? num : 0,
+        number: Number.isFinite(num) ? num : null, // ← nullable
         birthDate: birthDate ? new Date(birthDate) : new Date(),
         teamId: Number.isFinite(tId) ? tId : undefined,
         images,
