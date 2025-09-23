@@ -281,5 +281,6 @@ model News {
   title       String
   description String
   images      String[] @default([])
+  videos      String[] @default([])
   date        DateTime
 }

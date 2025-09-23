@@ -129,7 +129,7 @@ router.get('/:id', async (req, res) => {
 // --- POST /news
 router.post('/', async (req, res) => {
   try {
-    const { title, description, images = [], date } = req.body;
+    const { title, description, images = [], videos = [], date } = req.body;
 
     const parsedDate = date ? new Date(date) : new Date();
     if (isNaN(parsedDate))
@@ -141,6 +141,7 @@ router.post('/', async (req, res) => {
         description,
         date: parsedDate,
         images: Array.isArray(images) ? images : [images].filter(Boolean),
+        videos: Array.isArray(videos) ? videos : [videos].filter(Boolean),
       },
     });
 
@@ -157,8 +158,15 @@ router.put('/:id', async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id))
       return res.status(400).json({ error: 'Некорректный ID' });
-
-    const { title, description, images = [], imagesRaw = [], date } = req.body;
+    const {
+      title,
+      description,
+      images = [],
+      imagesRaw = [],
+      videos = [],
+      videosRaw = [],
+      date,
+    } = req.body;
 
     const exists = await prisma.news.findUnique({ where: { id } });
     if (!exists) return res.status(404).json({ error: 'Новость не найдена' });
@@ -172,6 +180,11 @@ router.put('/:id', async (req, res) => {
       ...(Array.isArray(imagesRaw) ? imagesRaw : []),
     ].filter(Boolean);
 
+    const updatedVideos = [
+      ...(Array.isArray(videos) ? videos : [videos]),
+      ...(Array.isArray(videosRaw) ? videosRaw : []),
+    ].filter(Boolean);
+
     const updated = await prisma.news.update({
       where: { id },
       data: {
@@ -179,6 +192,7 @@ router.put('/:id', async (req, res) => {
         description,
         date: parsedDate,
         images: updatedImages,
+        videos: updatedVideos,
       },
     });
 
