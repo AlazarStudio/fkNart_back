@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 router.get('/', async (req, res) => {
   try {
-    const range = req.query.range ? JSON.parse(req.query.range) : [0, 9];
+    const range = req.query.range ? JSON.parse(req.query.range) : [0, 9999];
     const sort = req.query.sort ? JSON.parse(req.query.sort) : ['id', 'ASC'];
     const filter = req.query.filter ? JSON.parse(req.query.filter) : {};
 

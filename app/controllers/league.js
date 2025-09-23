@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 // 📌 Получить все лиги (с пагинацией и сортировкой для React Admin)
 router.get('/', async (req, res) => {
   try {
-    const range = req.query.range ? JSON.parse(req.query.range) : [0, 9];
+    const range = req.query.range ? JSON.parse(req.query.range) : [0, 100];
     const sort = req.query.sort ? JSON.parse(req.query.sort) : ['id', 'ASC'];
     let filter = req.query.filter ? JSON.parse(req.query.filter) : {};
 

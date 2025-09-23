@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // 📌 Список игроков
 router.get('/', async (req, res) => {
   try {
-    const range = req.query.range ? JSON.parse(req.query.range) : [0, 50];
+    const range = req.query.range ? JSON.parse(req.query.range) : [0, 999];
     const sort = req.query.sort ? JSON.parse(req.query.sort) : ['id', 'ASC'];
     const rawFilter = req.query.filter ? JSON.parse(req.query.filter) : {};
 

@@ -18,7 +18,7 @@ const toInt = (v) =>
 // GET /teams?range=[0,9]&sort=["id","ASC"]&filter={"q":"...","city":"...","title":"...", "id":[1,2]}
 router.get('/', async (req, res) => {
   try {
-    const range = safeJSON(req.query.range, [0, 9]);
+    const range = safeJSON(req.query.range, [0, 9999]);
     const sort = safeJSON(req.query.sort, ['id', 'ASC']);
     const filter = safeJSON(req.query.filter, {});
 
