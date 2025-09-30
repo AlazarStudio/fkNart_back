@@ -203,20 +203,82 @@ router.post('/recalc/:leagueId', async (req, res) => {
 });
 
 // 🔹 Обновить запись вручную
+// В PUT /:id — замените существующий обработчик на этот:
 router.put('/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const data = req.body;
+    if (Number.isNaN(id)) return res.status(400).json({ error: 'Неверный id' });
+
+    // берём только поля, которые разрешаем обновлять
+    const allowed = [
+      'league_id',
+      'team_id',
+      'played',
+      'wins',
+      'draws',
+      'losses',
+      'goals_for',
+      'goals_against',
+      'points',
+    ];
+
+    const payload = {};
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+        // если ожидаем число — приводим
+        const val = req.body[key];
+        // простая проверка: если ключ концетрируется на числах, приводим
+        if (
+          [
+            'league_id',
+            'team_id',
+            'played',
+            'wins',
+            'draws',
+            'losses',
+            'goals_for',
+            'goals_against',
+            'points',
+          ].includes(key)
+        ) {
+          // если пустая строка — игнорируем
+          if (val === '' || val === null || val === undefined) continue;
+          const n = Number(val);
+          if (Number.isNaN(n)) {
+            return res
+              .status(400)
+              .json({ error: `Параметр ${key} должен быть числом` });
+          }
+          payload[key] = n;
+        } else {
+          payload[key] = val;
+        }
+      }
+    }
+
+    // защита: не пытаемся обновлять id
+    delete payload.id;
 
     const updated = await prisma.leagueStanding.update({
       where: { id },
-      data,
+      data: payload,
     });
 
     res.json(updated);
   } catch (err) {
+    // логируем полезные детали — в dev можно вернуть клиенту, в prod — храните в логах
     console.error('Ошибка PUT /leagueStandings/:id:', err);
-    res.status(500).json({ error: 'Ошибка обновления записи' });
+    // Если это PrismaKnownError — попробуйте вернуть код и meta
+    const extra = {};
+    if (err.code) extra.code = err.code;
+    if (err.meta) extra.meta = err.meta;
+    res
+      .status(500)
+      .json({
+        error: 'Ошибка обновления записи',
+        message: err.message,
+        ...extra,
+      });
   }
 });
 
