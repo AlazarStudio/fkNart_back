@@ -207,7 +207,7 @@ model MatchEvent {
   player   Player? @relation("MainPlayer", fields: [playerId], references: [id], onDelete: SetNull)
 
   assistPlayerId Int?
-  assist_player  Player? @relation("AssistPlayer", fields: [assistPlayerId], references: [id])
+  assist_player  Player? @relation("AssistPlayer", fields: [assistPlayerId], references: [id], onDelete: SetNull)
 
   teamId Int
   team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
