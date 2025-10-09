@@ -203,8 +203,8 @@ model MatchEvent {
   type        EventType
   description String?
 
-  playerId Int
-  player   Player @relation("MainPlayer", fields: [playerId], references: [id], onDelete: Cascade)
+  playerId Int?
+  player   Player? @relation("MainPlayer", fields: [playerId], references: [id], onDelete: Cascade)
 
   assistPlayerId Int?
   assist_player  Player? @relation("AssistPlayer", fields: [assistPlayerId], references: [id])
