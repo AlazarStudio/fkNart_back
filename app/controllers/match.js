@@ -8,6 +8,19 @@ const prisma = new PrismaClient();
 // ---- helpers ----
 const isGoalType = (type) => type === 'GOAL' || type === 'PENALTY_SCORED';
 
+function buildEventData(e, matchId) {
+  return {
+    minute: e.minute ? Number(e.minute) : 0,
+    half: e.half ? Number(e.half) : 1,
+    type: e.type,
+    description: e.description || '',
+    teamId: Number(e.teamId),
+    matchId,
+    ...(e.playerId ? { playerId: Number(e.playerId) } : {}), // ⬅️ не отправляем поле, если нет
+    ...(e.assistPlayerId ? { assistPlayerId: Number(e.assistPlayerId) } : {}),
+  };
+}
+
 async function incrementStatTx(tx, playerId, type) {
   if (!playerId) return;
   await tx.playerStat.upsert({
@@ -197,18 +210,7 @@ router.post('/', async (req, res) => {
       if (Array.isArray(events) && events.length) {
         for (const e of events) {
           const createdEvent = await tx.matchEvent.create({
-            data: {
-              minute: e.minute ? Number(e.minute) : 0,
-              half: e.half ? Number(e.half) : 1,
-              type: e.type,
-              description: e.description || '',
-              playerId: e.playerId ? Number(e.playerId) : null,
-              assistPlayerId: e.assistPlayerId
-                ? Number(e.assistPlayerId)
-                : null,
-              teamId: Number(e.teamId),
-              matchId: match.id,
-            },
+            data: buildEventData(e, match.id),
           });
           if (createdEvent.playerId) {
             await incrementStatTx(tx, createdEvent.playerId, createdEvent.type);
@@ -332,18 +334,7 @@ router.put('/:id(\\d+)', async (req, res) => {
 
         for (const e of events) {
           const ne = await tx.matchEvent.create({
-            data: {
-              minute: e.minute ? Number(e.minute) : 0,
-              half: e.half ? Number(e.half) : 1,
-              type: e.type,
-              description: e.description || '',
-              playerId: e.playerId ? Number(e.playerId) : null,
-              assistPlayerId: e.assistPlayerId
-                ? Number(e.assistPlayerId)
-                : null,
-              teamId: Number(e.teamId),
-              matchId: id,
-            },
+            data: buildEventData(e, id),
           });
           if (ne.playerId) await incrementStatTx(tx, ne.playerId, ne.type);
           if (ne.assistPlayerId && ne.type === 'GOAL') {
